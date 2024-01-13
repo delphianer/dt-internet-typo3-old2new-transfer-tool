@@ -8,5 +8,16 @@ My aim is to do as less manually work as possible.
 
 ### Setup 
 
-Use Python 11.x or higher, that should do all.
+Use Python 11.x or higher, that should do all => use pip for requirements in your venv.
 
+### config
+
+first run creates a basic config with my project settings
+
+Please change them first in main.py if I have no template for you yet :)
+
+# final thoughts
+
+I had fun with an LLM to do that in one evening :)
+
+Have fun, too, to mod it :)

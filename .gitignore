@@ -153,3 +153,4 @@ cython_debug/
 
 # files are downloaded to this folder:
 /downloaded
+config/conf_main.json
