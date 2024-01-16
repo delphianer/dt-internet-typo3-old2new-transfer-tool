@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 import html2text
 import re
 
+from src.UniqueStack import UniqueStack
+
 
 def get_absolute_url(base_url, relative_url):
     return base_url + relative_url if not relative_url.startswith('http') else relative_url
@@ -27,20 +29,20 @@ def get_all_urls_from_sitemap(base_url, sitemap_path, excluded_paths):
     return urls
 
 
-def scrape_page(url, get_content_as_html=True, get_content_as_markdown=False):
+def scrape_page(url, config, get_content_as_html=True, get_content_as_markdown=False):
     try:
         response = requests.get(url)
         response.raise_for_status()
         # Fügen Sie hier Ihre Logik zum Extrahieren von Texten und Bildern ein
     except requests.exceptions.RequestException as e:
         print(f"Fehler beim Abrufen der Seite {url}: {e}")
-        return None
+        return None, None
 
     soup = BeautifulSoup(response.text, 'html.parser')
     col3_content = soup.find('div', id='col3_content')
 
     if not col3_content:
-        return {"url": url, "data": "Kein Inhalt gefunden"}
+        return {"url": url, "data": "Kein Inhalt gefunden"}, None
 
     images = [img['src'] for img in col3_content.find_all('img') if 'src' in img.attrs]
 
@@ -52,6 +54,11 @@ def scrape_page(url, get_content_as_html=True, get_content_as_markdown=False):
             image_url = match.group(1)
             images.append(image_url)
 
+    if config["follow_links_on_same_page"]:
+        urls = gather_urls(col3_content, config)
+    else:
+        urls = []
+
     if get_content_as_html:
         content = str(col3_content)
     elif get_content_as_markdown:
@@ -61,14 +68,22 @@ def scrape_page(url, get_content_as_html=True, get_content_as_markdown=False):
     else:
         content = col3_content.get_text()
 
-    return {"url": url, "data": content, "images": images}
+    return {"url": url, "data": content, "images": images}, urls
 
 
-def download_all_pictures(base_url, pic_list, main_file_name, download_folder_name):
-    for i, pic_url in enumerate(pic_list, start=1):
+def download_all_pictures(pic_list, main_file_name, download_folder_name, config, test_me):
+    urls_found = []
+    images_todo = UniqueStack()
+    images_todo.push_all(pic_list)
+    i = 0
+    while not images_todo.is_empty():
+        pic_url = images_todo.pop()
+        i += 1
         # Bestimmen des Dateinamens für jedes Bild
         file_extension = pic_url.split('.')[-1]
+        html_possible = False
         if len(file_extension) > 4:
+            html_possible = True
             print("Unbekannte File Extension bei",main_file_name, "Bild nr.", i, "EXT:",file_extension)
             file_extension = "_original_file_.jpg"
             # TODO: Bilder die das enthalten, sind tatsächlich HTML-Daten => diese beinhalten eine URL mit einem Bild
@@ -88,10 +103,42 @@ def download_all_pictures(base_url, pic_list, main_file_name, download_folder_na
 
         # Herunterladen und Speichern des Bildes
         try:
-            response = requests.get(base_url+pic_url)
+            response = requests.get(config['page_base']+pic_url)
             response.raise_for_status()
-            with open(image_filename, 'wb') as file:
-                file.write(response.content)
+            if not test_me:
+                with open(image_filename, 'wb') as file:
+                    file.write(response.content)
+
+            if html_possible:
+                try:  # schauen ob content HTML ist:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    if test_me:
+                        print("response.text = ")
+                        print(response.text)
+                    body_content = soup.find('body')
+                    urls = gather_urls(body_content, config)
+                    images = [img['src'] for img in body_content.find_all('img') if 'src' in img.attrs]
+                    images_todo.push_all(images)
+                    if test_me:
+                        if len(images) > 0:
+                            print("\n\nNEW PICTURE DOWNLOAD FOUND:")
+                            print("-" * 50)
+                            print(images)
+                            print("-" * 50)
+                            images_todo.print_stack()
+                            print("-" * 50, "\n\n")
+                    urls_found.extend(urls)
+                except:
+                    pass
         except requests.exceptions.RequestException as e:
             print(f"Fehler beim Herunterladen des Bildes {pic_url}: {e}")
 
+    return urls_found
+
+
+def gather_urls(body_content, config):
+    links = body_content.find_all('a') if body_content else []
+    urls = [get_absolute_url(config["page_base"], link['href']) for link in links if
+            'href' in link.attrs and link['href'].startswith(config["page_base"])
+            and not any(excluded_path in link['href'] for excluded_path in config["excluded_paths"])]
+    return urls

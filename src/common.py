@@ -4,6 +4,7 @@ import time
 import platform
 import hashlib
 import json
+from urllib.parse import urlparse
 
 
 # V13.01.2024
@@ -167,3 +168,16 @@ class F:
         with open(file=F.__config_file, encoding="UTF-8", mode="r") as file:
             configObj = json.load(file)
             return configObj
+
+    @classmethod
+    def get_download_dir_structure_and_file_name_from(cls, url):
+        parsed_url = urlparse(url)
+
+        paths = [path for path in parsed_url.path.split('/') if path]
+
+        dl_file_name = paths[-1].split('#')[0]
+
+        paths = paths[:-1]
+        dir_name = os.path.sep.join(paths)
+
+        return dir_name, dl_file_name
