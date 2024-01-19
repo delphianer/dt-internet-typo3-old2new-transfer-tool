@@ -62,10 +62,10 @@ class F:
         F.print_und_log("Logfile = " + F.log_file_name)
 
     @classmethod
-    def print_und_log(cls, msg):
+    def print_und_log(cls, msg, msg_part2 = "", msg_part3 = ""):
         if F.do_print:
-            print(msg)
-        logging.debug(msg)
+            print(msg,msg_part2,msg_part3)
+        logging.debug(msg+" "+msg_part2+" "+msg_part3)
 
     @classmethod
     def i(cls, *msg):

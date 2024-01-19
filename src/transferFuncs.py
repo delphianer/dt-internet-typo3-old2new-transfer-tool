@@ -1,12 +1,11 @@
 import os.path
-
 import requests
 from bs4 import BeautifulSoup
 import html2text
 import re
-
 from src.UniqueStack import UniqueStack
 
+# Todo: remove this file => everything is in DownloadManager class
 
 def get_absolute_url(base_url, relative_url):
     return base_url + relative_url if not relative_url.startswith('http') else relative_url
@@ -56,7 +55,7 @@ def scrape_page(url, config, get_content_as_html=True, get_content_as_markdown=F
             images.append(image_url)
 
     if config["follow_links_on_same_page"]:
-        urls = gather_urls(col3_content, config)
+        pass #urls = gather_urls(col3_content, config)
     else:
         urls = []
 
@@ -129,7 +128,7 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
                         print("response.text = ")
                         print(response.text)
                     body_content = soup.find('body')
-                    urls = gather_urls(body_content, config)
+                    urls = []#gather_urls(body_content, config)
                     images = [img['src'] for img in body_content.find_all('img') if 'src' in img.attrs]
                     images_todo.push_all(images)
                     if test_me:
@@ -152,9 +151,3 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
     return urls_found, images_done
 
 
-def gather_urls(body_content, config):
-    links = body_content.find_all('a') if body_content else []
-    urls = [get_absolute_url(config["page_base"], link['href']) for link in links if
-            'href' in link.attrs and link['href'].startswith(config["page_base"])
-            and not any(excluded_path in link['href'] for excluded_path in config["excluded_paths"])]
-    return urls

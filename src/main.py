@@ -16,13 +16,10 @@ def get_and_prepare_config():
         cfg['get_text'] = True
         cfg['get_pictures'] = True
         cfg['sleep_between_pages'] = 1
-        cfg['excluded_paths'] = ["termine", "news", "aktuelles"]
+        cfg['excluded_paths'] = ["javascript:"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
         cfg['extra_paths'] = ["sonderseiten/impressum.html",
-                                 "sonderseiten/datenschutz.html"
-                              # other excluded things...
-                              ,"javascript:"
-                              ]
-        cfg['follow_links_on_same_page'] = True
+                              "sonderseiten/datenschutz.html"]
+        cfg['follow_links_on_same_page'] = True # todo: ist obligatorisch, wenn sitemap erste Seite wird
         F.save_a_config(cfg)
         print(f"New config saved to {F.get_config_file_name()}")
     # load the latest config
