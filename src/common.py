@@ -65,7 +65,11 @@ class F:
     def print_und_log(cls, msg, msg_part2 = "", msg_part3 = ""):
         if F.do_print:
             print(msg,msg_part2,msg_part3)
-        logging.debug(msg+" "+msg_part2+" "+msg_part3)
+        logging.debug(msg)
+        if msg_part2 is not None and len(msg_part2)>0:
+            logging.debug(msg_part2)
+        if msg_part3 is not None and len(msg_part3)>0:
+            logging.debug(msg_part3)
 
     @classmethod
     def i(cls, *msg):

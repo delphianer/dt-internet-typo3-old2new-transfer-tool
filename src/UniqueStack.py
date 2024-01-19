@@ -30,15 +30,20 @@ class UniqueStack:
 
     def push_all(self, urls, base=""):
         """
-        :param urls: A list of URLs to be pushed.
-        :param base: A base URL that will be appended to each URL in the list.
+        Pushes all the URLs to a queue for processing.
+
+        :param urls: List of URLs to push.
+        :param base: Base URL to prepend to each URL.
                     This is neccesary if the URLs given are relative to the base URL
                     Default is an empty string.
-
         :return: None
+
         """
         for url in urls:
-            self.push(base+url)
+            if url[:4] == 'http':
+                self.push(url)
+            else:
+                self.push(base+url)
 
     def pop(self):
         """

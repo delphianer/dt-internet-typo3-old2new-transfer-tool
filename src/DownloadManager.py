@@ -4,10 +4,12 @@ from urllib.parse import urlparse
 import html2text
 import requests
 from bs4 import BeautifulSoup
-import transferFuncs
 from common import F
 from UniqueStack import UniqueStack
 import re
+
+IGNORE_DOWNLOAD = "ignore-download"
+
 
 class DownloadManager:
 
@@ -21,21 +23,20 @@ class DownloadManager:
         self.files_processed = UniqueStack()
 
     def download_files(self):
-        # TODO: set the sitemap as first URL to download => all other URLs will be parsed after that
-        urls = transferFuncs.get_all_urls_from_sitemap(self.config['page_base'],
-                                                       self.config['page_sitemap'],
-                                                       self.config["excluded_paths"])
-
-        self.urls_to_download.push_all(urls)
+        self.urls_to_download.push(self.config['page_base']+self.config['page_sitemap'])
         self.urls_to_download.push_all(self.config["extra_paths"], self.config["page_base"])
 
-        self.debug_todo_list()
+        # if a Test is needed - pass url like this
+        self.urls_to_download.push("http://ovetze.drkcms.de/aktuelles/news.html")
+        # self.urls_to_download.push("http://ovetze.drkcms.de/index.php?eID=tx_cms_showpic&file=285&md5=deac577160968a505000907066ca9aa98ebff496&parameters%5B0%5D=eyJ3aWR0aCI6Ijc5MiIsImhlaWdodCI6IjYwMG0iLCJib2R5VGFnIjoiPGJvZHkg&parameters%5B1%5D=c3R5bGU9XCJtYXJnaW46MDsgYmFja2dyb3VuZDojZmZmO1wiPiIsIndyYXAiOiI8&parameters%5B2%5D=YSBocmVmPVwiamF2YXNjcmlwdDpjbG9zZSgpO1wiPiB8IDxcL2E%2BIn0%3D")
+
+        self.print_todo_list()
 
         self.process_urls()
 
         return self.files_processed
 
-    def debug_todo_list(self):
+    def print_todo_list(self):
         if DownloadManager.debug_enabled:
             F.print_und_log("TODO:")
             F.print_und_log("-" * 50)
@@ -44,8 +45,6 @@ class DownloadManager:
 
     def process_urls(self):
         while not self.urls_to_download.is_empty():
-            # TODO: Use 'Content-Type'-Header-Info for choosing Download and process the html-file or an other datatype (like picture)
-            #       -> 'text/html;charset=utf-8'
             self.download_url(self.urls_to_download.pop())
             # wait a sec -> do not go to fast with the server of dt-internet
             time.sleep(1)
@@ -76,18 +75,12 @@ class DownloadManager:
     def download_url(self, url):
         F.print_und_log("\nNew URL: " + url)
         if self.url_is_valid(url):
-            #page_data, new_urls = transferFuncs.scrape_page(url, self.config)
-            page_data, new_urls = self.download_the_page_data(url)
-
-            self.urls_to_download.push_all(new_urls)
-
-            if len(new_urls) > 0:
-                self.debug_todo_list()
+            page_data = self.download_the_page_data(url)
 
             if page_data:
                 self.process_page_data(page_data, url)
             else:
-                F.print_und_log("No page data found in URL:"+ url)
+                F.logError("No page data found in URL:"+ url)
 
 
     def process_page_data(self, page_data, url):
@@ -106,9 +99,10 @@ class DownloadManager:
             F.print_und_log("JSON File:", file_path_json)
             F.print_und_log("Directory:", relativ_download_directory)
             F.print_und_log("file_name:", file_name)
-            F.print_und_log("page_title:", page_data["page_title"])
-            F.print_und_log("Encoding:", page_data["encoding"])
+            F.print_und_log("content-type:", page_data["content-type"])
             F.print_und_log("Headers:", page_data["headers"])
+            F.print_und_log("Encoding:", page_data["encoding"])
+            F.print_und_log("page_title:", page_data["page_title"])
             F.print_und_log("-" * 50, "\n\n")
             F.print_und_log("Bilder:")
             for i, img in enumerate( page_data["images"], start=1):
@@ -116,24 +110,20 @@ class DownloadManager:
             F.print_und_log("os.path.basename(file_path_page)", os.path.basename(file_path_page))
             F.print_und_log("-" * 50, "\n\n")
 
+        if len(page_data["images"])>0:
+            self.urls_to_download.push_all(page_data["images"], self.config["page_base"])
+            F.print_und_log("Bilder in Todo-Liste eingefügt!")
+            self.print_todo_list()
+
         if "text/html" in page_data["content-type"]:
             if not DownloadManager.debug_enabled:
                 with open(file_path_page, 'w') as file:
                     file.write(page_data["data"])
                 with open(file_path_json, 'w') as file:
                     file.write(str(page_data))
-                #new_urls, picture_files = transferFuncs.download_all_pictures(page_data["images"],
-                #                                                              os.path.basename(file_path_page),
-                #                                                              full_download_path,
-                #                                                              self.config,
-                #                                                              DownloadManager.debug_enabled)
-                #self.urls_to_download.push_all(new_urls)
-            if len(page_data["images"])>0:
-                self.urls_to_download.push_all(page_data["images"], self.config["page_base"])
-                F.print_und_log("Bilder in Todo-Liste eingefügt!")
-                self.debug_todo_list()
+        elif IGNORE_DOWNLOAD in page_data["content-type"]:
+            pass # happens if the picture is embedded in an iframe or a popup
         else:
-            F.print_und_log("#### BILD ZU LADEN: image_filename:", file_path_page)
             if not DownloadManager.debug_enabled:
                 with open(file_path_page, 'wb') as file:
                     file.write(page_data['data'])
@@ -149,13 +139,31 @@ class DownloadManager:
     def get_absolute_url(self, base_url, relative_url):
         return base_url + relative_url if not relative_url.startswith('http') else relative_url
 
-    def gather_urls(self, body_content):
-        links = body_content.find_all('a') if body_content else []
-        urls = [self.get_absolute_url(self.config["page_base"], link['href']) for link in links if
-                'href' in link.attrs and link['href'].startswith(self.config["page_base"])
-                and not any(excluded_path.lower() in [l.lower for l in link['href']]
-                            for excluded_path in self.config["excluded_paths"])]
-        return urls
+    def extract_new_download_links_from_html_content(self, html_content):
+        links = html_content.find_all('a') if html_content else []
+
+        if DownloadManager.debug_enabled:
+            print("-"*100)
+            print(links)
+            print("-" * 100)
+
+        valid_urls = []
+        for link in links:
+            if 'href' in link.attrs:
+                if not any(excluded_path in link['href'] for excluded_path in self.config["excluded_paths"]):
+                    if link['href'].startswith(self.config["page_base"]):  # absolute url from the same base
+                        valid_urls.append(self.get_absolute_url(self.config["page_base"], link['href']).split('#')[0])
+                    elif not link['href'].startswith(('http://', 'https://')):  # relative url
+                        valid_urls.append(self.get_absolute_url(self.config["page_base"], link['href']).split('#')[0])
+
+        if DownloadManager.debug_enabled:
+            print("-"*100)
+            print(valid_urls)
+            print("-"*100)
+
+        self.urls_to_download.push_all(valid_urls, self.config["page_base"])
+        if DownloadManager.debug_enabled:
+            self.print_todo_list()
 
     def download_the_page_data(self, url):
         # todo: setup:
@@ -172,56 +180,58 @@ class DownloadManager:
 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 page_title = soup.title.string
+                body = soup.find('body')
+                self.extract_new_download_links_from_html_content(body)
                 col3_content = soup.find('div', id='col3_content')
 
                 if not col3_content:
-                    return {"url": url, "data": "Kein Inhalt gefunden"}, None
-
-                images = [img['src'] for img in col3_content.find_all('img') if 'src' in img.attrs]
-
-                # Extrahieren der Bild-URLs aus onclick-Events
-                for a_tag in col3_content.find_all('a', onclick=True):
-                    onclick_text = a_tag.get('onclick', '')
-                    match = re.search(r"openPic\('([^']*)'", onclick_text)
-                    if match:
-                        image_url = match.group(1)
-                        images.append(image_url)
-
-                if self.config["follow_links_on_same_page"]:
-                    urls = self.gather_urls(col3_content)
+                    F.logError("Kein konkreten Inhalt gefunden:"+url)
+                    # search for another a-tags:
+                    html = soup.find("html")
+                    self.extract_new_download_links_from_html_content(html)
+                    images = [img['src'] for img in body.find_all('img') if 'src' in img.attrs]
+                    content = "No Data -> it is an image!"
+                    page_data_content_type = IGNORE_DOWNLOAD
                 else:
-                    urls = []
+                    images = [img['src'] for img in col3_content.find_all('img') if 'src' in img.attrs]
 
-                if get_content_as_html:
-                    content = str(col3_content)
-                elif get_content_as_markdown:
-                    markdown_converter = html2text.HTML2Text()
-                    markdown_converter.ignore_links = False
-                    content = markdown_converter.handle(str(col3_content))
-                else:
-                    content = col3_content.get_text()
+                    # Extrahieren der Bild-URLs aus onclick-Events
+                    for a_tag in col3_content.find_all('a', onclick=True):
+                        onclick_text = a_tag.get('onclick', '')
+                        match = re.search(r"openPic\('([^']*)'", onclick_text)
+                        if match:
+                            image_url = match.group(1)
+                            images.append(image_url)
+
+                    if get_content_as_html:
+                        content = str(col3_content)
+                    elif get_content_as_markdown:
+                        markdown_converter = html2text.HTML2Text()
+                        markdown_converter.ignore_links = False
+                        content = markdown_converter.handle(str(col3_content))
+                    else:
+                        content = col3_content.get_text()
             else:
                 #F.print_und_log("A Picture or binary to download ->",page_data_content_type)
                 page_title = 'FileDownload'
                 content = response.content
                 images = []
-                urls = []
 
-            return ({"url": url,
+            return {"url": url,
                     "encoding":response.encoding,
                     "content-type": page_data_content_type,
                     "headers": response.headers,
                     "page_title": page_title,
                     "data": content,
-                    "images": images}, urls)
+                    "images": images}
         except requests.exceptions.RequestException as e:
-            F.print_und_log(f"Fehler beim Abrufen der Seite {url}: {e}")
+            F.logException(f"Fehler beim Abrufen der Seite {url}: {e}")
             return None
 
     def url_is_valid(self, url):
         file_path = self.__get_download_dir_structure_from(url)+"/"+self.__get_file_name_from(url)
         if ":" in file_path:
-            F.print_und_log("#### !!!! #### \n URL is not valid: ", url)
+            F.logError("URL is not valid: "+ url)
             return False
         #F.print_und_log("URL ist valide mit Pfad:", file_path)
         return True

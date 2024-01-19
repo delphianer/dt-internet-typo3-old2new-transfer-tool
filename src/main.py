@@ -16,10 +16,9 @@ def get_and_prepare_config():
         cfg['get_text'] = True
         cfg['get_pictures'] = True
         cfg['sleep_between_pages'] = 1
-        cfg['excluded_paths'] = ["javascript:"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
+        cfg['excluded_paths'] = ["javascript:", "suche.html"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
         cfg['extra_paths'] = ["sonderseiten/impressum.html",
                               "sonderseiten/datenschutz.html"]
-        cfg['follow_links_on_same_page'] = True # todo: ist obligatorisch, wenn sitemap erste Seite wird
         F.save_a_config(cfg)
         print(f"New config saved to {F.get_config_file_name()}")
     # load the latest config
@@ -42,6 +41,10 @@ if __name__ == "__main__":
     # 1. Step: Download files and gather web-data
     dlMan = DownloadManager(config, download_folder_name)
     files_to_prepare_for_upload = dlMan.download_files()
+    # todo: files_to_prepare_for_upload -> content!
+
+    # Todo: save the result
+    # todo: load the result so the first step can be skipped
 
     # 2. Step: Prepare Data to Upload
     # TODO: extract the Text Only - remove unnecessary Tags
