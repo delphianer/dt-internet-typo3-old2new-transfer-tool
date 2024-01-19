@@ -1,4 +1,23 @@
 class UniqueStack:
+    """
+
+    :class: UniqueStack
+
+    A stack that stores unique URLs and provides methods for adding and removing URLs.
+
+    :ivar stack: A list that stores the URLs in the stack.
+    :ivar stackSet: A set that stores the URLs in the stack for quick lookup.
+    :ivar ignoreSet: A set that stores the URLs that should be ignored and should not be added to the stack.
+
+    Methods:
+        - __init__(self, ignore_stack=None): Initializes the UniqueStack object.
+        - push(self, url): Pushes a URL to the top of the stack.
+        - push_all(self, urls, base=""): Pushes multiple URLs to the stack.
+        - pop(self): Removes and returns the top URL from the stack.
+        - is_empty(self): Checks if the stack is empty.
+        - print_stack(self): Prints the URLs in the stack.
+
+    """
     def __init__(self, ignore_stack=None):
         self.stack = []
         self.stackSet = set()
@@ -10,6 +29,14 @@ class UniqueStack:
             self.stackSet.add(url)
 
     def push_all(self, urls, base=""):
+        """
+        :param urls: A list of URLs to be pushed.
+        :param base: A base URL that will be appended to each URL in the list.
+                    This is neccesary if the URLs given are relative to the base URL
+                    Default is an empty string.
+
+        :return: None
+        """
         for url in urls:
             self.push(base+url)
 

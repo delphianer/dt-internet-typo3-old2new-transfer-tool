@@ -39,6 +39,7 @@ def scrape_page(url, config, get_content_as_html=True, get_content_as_markdown=F
         return None, None
 
     soup = BeautifulSoup(response.text, 'html.parser')
+    page_title = soup.title.string
     col3_content = soup.find('div', id='col3_content')
 
     if not col3_content:
@@ -68,13 +69,20 @@ def scrape_page(url, config, get_content_as_html=True, get_content_as_markdown=F
     else:
         content = col3_content.get_text()
 
-    return {"url": url, "data": content, "images": images}, urls
+    return ({"url": url,
+            "encoding":response.encoding,
+            "headers": response.headers,
+            "page_title": page_title,
+            "data": content,
+            "images": images},
+            urls)
 
 
 def download_all_pictures(pic_list, main_file_name, download_folder_name, config, test_me):
     urls_found = []
     images_todo = UniqueStack()
     images_todo.push_all(pic_list)
+    images_done = UniqueStack()
     i = 0
     while not images_todo.is_empty():
         pic_url = images_todo.pop()
@@ -101,6 +109,7 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
 
         image_filename = os.path.join(download_folder_name,f"{main_file_name}.{str(i).zfill(3)}.{file_extension}")
 
+        image_should_go_in_stack = False
         # Herunterladen und Speichern des Bildes
         try:
             response = requests.get(config['page_base']+pic_url)
@@ -128,12 +137,15 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
                             images_todo.print_stack()
                             print("-" * 50, "\n\n")
                     urls_found.extend(urls)
+                    image_should_go_in_stack = False # this was no image
                 except:
                     pass
         except requests.exceptions.RequestException as e:
             print(f"Fehler beim Herunterladen des Bildes {pic_url}: {e}")
+        if not image_should_go_in_stack:
+            images_done.push(image_filename)
 
-    return urls_found
+    return urls_found, images_done
 
 
 def gather_urls(body_content, config):
