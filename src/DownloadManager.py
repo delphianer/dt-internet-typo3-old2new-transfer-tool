@@ -12,7 +12,7 @@ class DownloadManager:
 
     def __init__(self,  global_config, download_to_directory):
         self.config = global_config
-        self.dl_dir = download_to_directory
+        self.base_download_directory = download_to_directory
         self.urls_to_download = UniqueStack()
         self.files_processed = UniqueStack()
 
@@ -39,28 +39,40 @@ class DownloadManager:
 
     def process_urls(self):
         while not self.urls_to_download.is_empty():
+            # TODO: Use 'Content-Type'-Header-Info for choosing Download and process the html-file or an other datatype (like picture)
+            #       -> 'text/html;charset=utf-8'
             self.download_url(self.urls_to_download.pop())
+            # wait a sec -> do not go to fast with the server of dt-internet
+            time.sleep(1)
 
+    # def __get_download_dir_structure_and_file_name_from(self, url):
+    #     parsed_url = urlparse(url)
+    #     paths = [path for path in parsed_url.path.split('/') if path]
+    #     dl_file_name = paths[-1].split('#')[0]
+    #
+    #     paths = paths[:-1]
+    #     dir_name = os.path.sep.join(paths)
+    #
+    #     return dir_name, dl_file_name
 
-            time.sleep(1)  # Verzögerung von 1 Sekunde zwischen den Anfragen
-
-    def __get_download_dir_structure_and_file_name_from(self, url):
-
+    def __get_download_dir_structure_from(self, url):
         parsed_url = urlparse(url)
-
         paths = [path for path in parsed_url.path.split('/') if path]
-
-        dl_file_name = paths[-1].split('#')[0]
-
         paths = paths[:-1]
         dir_name = os.path.sep.join(paths)
+        return dir_name
 
-        return dir_name, dl_file_name
-
+    def __get_file_name_from(self, url):
+        parsed_url = urlparse(url)
+        paths = [path for path in parsed_url.path.split('/') if path]
+        dl_file_name = paths[-1].split('#')[0]
+        return dl_file_name
 
     def download_url(self, url):
         print("Bearbeite", url)
         page_data, new_urls = transferFuncs.scrape_page(url, self.config)
+        # todo: page_data = self.download_the_page_data(url)
+        # todo: new_urls = self.perform_analyze_page_data(page_data)
 
         self.urls_to_download.push_all(new_urls)
 
@@ -74,8 +86,9 @@ class DownloadManager:
 
 
     def process_page_data(self, page_data, url):
-        directory, file_name = self.__get_download_dir_structure_and_file_name_from(url)
-        full_download_path = os.path.join(self.dl_dir, directory)
+        relativ_download_directory = self.__get_download_dir_structure_from(url)
+        file_name = self.__get_file_name_from(url)
+        full_download_path = os.path.join(self.base_download_directory, relativ_download_directory)
 
         if not DownloadManager.debug_enabled:
             os.makedirs(full_download_path, exist_ok=True)
@@ -86,7 +99,7 @@ class DownloadManager:
         if DownloadManager.debug_enabled:
             print("\n\nNew File:", file_path_page)
             print("JSON File:", file_path_json)
-            print("Directory:", directory)
+            print("Directory:", relativ_download_directory)
             print("file_name:", file_name)
             print("page_title:", page_data["page_title"])
             print("Encoding:", page_data["encoding"])

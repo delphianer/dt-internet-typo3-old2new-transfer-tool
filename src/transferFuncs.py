@@ -86,6 +86,7 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
     i = 0
     while not images_todo.is_empty():
         pic_url = images_todo.pop()
+        # TODO: feature: get also other high res pictures, not mentioned in text (hint is always "_processed_" dir name
         i += 1
         # Bestimmen des Dateinamens für jedes Bild
         file_extension = pic_url.split('.')[-1]
@@ -114,10 +115,13 @@ def download_all_pictures(pic_list, main_file_name, download_folder_name, config
         try:
             response = requests.get(config['page_base']+pic_url)
             response.raise_for_status()
+            print("headers", response.headers)
+            # todo: difference between pictures and html: 'Content-Type': 'image/jpeg'
             if not test_me:
                 with open(image_filename, 'wb') as file:
                     file.write(response.content)
 
+            # DONE: feature: "pictures" found intern may contain html -> do not solve it at picture-download-function
             if html_possible:
                 try:  # schauen ob content HTML ist:
                     soup = BeautifulSoup(response.text, 'html.parser')

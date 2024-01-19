@@ -23,9 +23,6 @@ def get_and_prepare_config():
                               ,"javascript:"
                               ]
         cfg['follow_links_on_same_page'] = True
-        # TODO: feature: check encoding! all german special chars are wrong...
-        # TODO: feature: "pictures" found intern may contain html -> do not solve it at picture-download-function
-        # TODO: feature: get also other high res pictures, not mentioned in text (hint is always "_processed_" dir name
         F.save_a_config(cfg)
         print(f"New config saved to {F.get_config_file_name()}")
     # load the latest config
@@ -50,4 +47,8 @@ if __name__ == "__main__":
     files_to_prepare_for_upload = dlMan.download_files()
 
     # 2. Step: Prepare Data to Upload
+    # TODO: extract the Text Only - remove unnecessary Tags
+    # TODO: feature: check encoding! all german special chars are wrong...
 
+    # 3. Step: Use Typo3-API https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/Introduction/Index.html
+    # TODO: read and use documentation
