@@ -22,6 +22,8 @@ def get_and_prepare_config():
         cfg['excluded_paths'] = ["javascript:", "suche.html", "sonderseiten/drkde.html"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
         cfg['extra_paths'] = ["sonderseiten/impressum.html",
                               "sonderseiten/datenschutz.html"]
+        cfg['target_page'] = ["https://drk-spielberg.de/"] # for test only!
+        cfg['target_page_test_only'] = True
         F.save_a_config(cfg)
         print(f"New config saved to {F.get_config_file_name()}")
     # load the latest config
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     config, download_folder_name = get_and_prepare_config()
 
     # todo: change if other imports
-    default_load = True
+    default_load = False
     default_load_number = 3
 
     files_processed = []
@@ -88,6 +90,7 @@ if __name__ == "__main__":
         dlMan.load_filelist_from(pickle_file_to_load)
 
     pagePrepMan = PreparationManager()
+    pagePrepMan.debug_enabled = DownloadManager.debug_enabled
 
     if dlMan.has_files_downloaded():
         pagePrepMan.set_files_processed(dlMan.get_files_to_prepare_for_upload())
@@ -96,3 +99,5 @@ if __name__ == "__main__":
 
     # 3. Step: Use Typo3-API https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/Introduction/Index.html
     # TODO: read and use documentation
+    # cfg['target_page'] => where to upload all the data
+    # cfg['target_page_test_only'] => will add the first page or image and delete it directly after
