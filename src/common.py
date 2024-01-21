@@ -47,7 +47,7 @@ class F:
 
         # logging-setup
         datetime = time.strftime("%Y-%m-%d")
-        logging_directory = os.path.join(os.path.dirname(__file__), logfile_dir_name)
+        logging_directory = os.path.join(os.path.dirname(os.path.dirname(__file__)), logfile_dir_name)
         if not os.path.exists(logging_directory):
             os.makedirs(logging_directory)
 
@@ -171,4 +171,8 @@ class F:
         with open(file=F.__config_file, encoding="UTF-8", mode="r") as file:
             configObj = json.load(file)
             return configObj
+
+    @classmethod
+    def logInfo(cls, msg):
+        logging.debug(msg)
 

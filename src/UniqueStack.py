@@ -65,3 +65,6 @@ class UniqueStack:
     def print_stack(self):
         for num, url in enumerate(self.stack, start=1):
             print(f"{num}:", url)
+
+    def count(self):
+        return len(self.stack)
