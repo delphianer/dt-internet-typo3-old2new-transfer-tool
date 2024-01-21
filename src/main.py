@@ -21,7 +21,8 @@ def get_and_prepare_config():
         cfg['sleep_between_pages'] = 1
         cfg['excluded_paths'] = ["javascript:", "suche.html", "sonderseiten/drkde.html"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
         cfg['extra_paths'] = ["sonderseiten/impressum.html",
-                              "sonderseiten/datenschutz.html"]
+                              "sonderseiten/datenschutz.html",
+                              "aktuelles/news.html"]
         cfg['target_page'] = ["https://drk-spielberg.de/"] # for test only!
         cfg['target_page_test_only'] = True
         F.save_a_config(cfg)
@@ -37,6 +38,26 @@ def get_and_prepare_config():
     return cfg, dl_folder_name
 
 
+def ask_for_pickle_filename():
+    path = os.path.join(os.path.dirname(download_folder_name), filter_files)
+    pkl_files = glob.glob(path)
+    if len(pkl_files) > 0:
+        for i, file in enumerate(pkl_files):
+            print(f"{i}: {file}")
+
+        if default_load:
+            file_index = default_load_number
+        else:
+            file_index = int(input("Enter the index number of the file you want to load: "))
+        if len(pkl_files) > file_index:
+            return pkl_files[file_index]
+        else:
+            print("Index not in Range")
+    else:
+        print("No file found")
+    return ""
+
+
 # # # # # # #
 # Main Part #
 # # # # # # #
@@ -44,8 +65,8 @@ if __name__ == "__main__":
     config, download_folder_name = get_and_prepare_config()
 
     # todo: change if other imports
-    default_load = False
-    default_load_number = 3
+    default_load = True
+    default_load_number = 4
 
     files_processed = []
     DownloadManager.debug_enabled = input("Enter 'D' for enabling debug-mode: ").lower() == 'd'
@@ -58,31 +79,15 @@ if __name__ == "__main__":
 
     # 1. Step: Download files and gather web-data
     if download_or_load.lower() != 'l':
-        if not DownloadManager.debug_enabled:
-            num_downloads = input("Enter the number of maximum downloads or leave blank: ")
-            if len(num_downloads) > 0:
-                DownloadManager.maximum_downloads = int(num_downloads)
+        #if not DownloadManager.debug_enabled:
+        num_downloads = input("Enter the number of maximum downloads or leave blank: ")
+        if len(num_downloads) > 0:
+            DownloadManager.maximum_downloads = int(num_downloads)
         dlMan.download_files()
         dlMan.save_filelist_to_pickle(download_folder_name+'_files_after_download.pkl')
     else:
-        path = os.path.join(os.path.dirname(download_folder_name), '*.pkl')
-        print("Suche im Pfad:",path)
-        pkl_files = glob.glob(path)
-
-        if len(pkl_files) > 0:
-            for i, file in enumerate(pkl_files):
-                print(f"{i}: {file}")
-
-            if default_load:
-                file_index = default_load_number
-            else:
-                file_index = int(input("Enter the index number of the file you want to load: "))
-            if len(pkl_files) > file_index:
-                pickle_file_to_load = pkl_files[file_index]
-            else:
-                print("Index not in Range")
-        else:
-            print("No file found")
+        filter_files = '*downloaded.pkl'
+        pickle_file_to_load = ask_for_pickle_filename()
 
     # 2. Step: Prepare Data to Upload
     # if pickle to load - print the stats first
@@ -92,12 +97,14 @@ if __name__ == "__main__":
     pagePrepMan = PreparationManager()
     pagePrepMan.debug_enabled = DownloadManager.debug_enabled
 
-    if dlMan.has_files_downloaded():
+    if dlMan.some_files_have_been_downloaded():
         pagePrepMan.set_files_processed(dlMan.get_files_to_prepare_for_upload())
         pagePrepMan.print_download_stats()
         pagePrepMan.prepare_pages()
+        # todo: pagePrepMan.save_filelist_to_pickle()
 
     # 3. Step: Use Typo3-API https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/Introduction/Index.html
     # TODO: read and use documentation
+    # todo: ask_for_pickle_filename and ask if only upload processed
     # cfg['target_page'] => where to upload all the data
     # cfg['target_page_test_only'] => will add the first page or image and delete it directly after

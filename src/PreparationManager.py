@@ -15,6 +15,10 @@ def load_the_page(filename):
 
 
 def get_created_datetime_from_page(page_html):
+    """
+    :param page_html: The HTML content of the page from which to extract the created datetime.
+    :return: A tuple containing the created datetime as a datetime.datetime object and the original datestring.
+    """
     soup = BeautifulSoup(page_html, "html.parser")
     date_div = soup.find("div", {"class": "news-single-timedata"})
     if date_div:
