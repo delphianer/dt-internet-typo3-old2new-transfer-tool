@@ -14,6 +14,7 @@ NO_FILE_NAME = '_no_file_name'
 
 IGNORE_DOWNLOAD = "ignore-download"
 
+
 class DownloadManager:
     """
     DownloadManager class
@@ -33,7 +34,7 @@ class DownloadManager:
             Downloads files from a list of URLs.
 
         print_todo_list(self) -> None:
-            Prints the todo list of the DownloadManager.
+            Prints the todolist of the DownloadManager.
 
         process_urls(self) -> None:
             Process the URLs in the download manager.
@@ -57,11 +58,13 @@ class DownloadManager:
     # wait a second after x files:
     pause_each_file = 100
 
-    def __init__(self,  global_config, download_to_directory):
+    def __init__(self, global_config, download_to_directory):
         self.config = global_config
         self.base_download_directory = download_to_directory
+        print("download_to_directory",download_to_directory)
         self.urls_to_download = UniqueStack()
         self.files_processed = []
+        self.print_todo_list()
 
     def download_files(self) -> None:
         """
@@ -81,11 +84,11 @@ class DownloadManager:
             Exception: If there was an error while downloading the files.
         """
         try:
-            self.urls_to_download.push(self.config["page_base"]+self.config['page_sitemap'])
+            self.urls_to_download.push(self.config["page_base"] + self.config['page_sitemap'])
             self.urls_to_download.push_all(self.config["extra_paths"], self.config["page_base"])
 
             # if a Test is needed - pass url like this
-            #self.urls_to_download.push(self.config['page_base']+self.config['page_sitemap'])
+            # self.urls_to_download.push(self.config['page_base']+self.config['page_sitemap'])
             # self.urls_to_download.push("http://ovetze.drkcms.de/index.php?eID=tx_cms_showpic&file=285&md5=deac577160968a505000907066ca9aa98ebff496&parameters%5B0%5D=eyJ3aWR0aCI6Ijc5MiIsImhlaWdodCI6IjYwMG0iLCJib2R5VGFnIjoiPGJvZHkg&parameters%5B1%5D=c3R5bGU9XCJtYXJnaW46MDsgYmFja2dyb3VuZDojZmZmO1wiPiIsIndyYXAiOiI8&parameters%5B2%5D=YSBocmVmPVwiamF2YXNjcmlwdDpjbG9zZSgpO1wiPiB8IDxcL2E%2BIn0%3D")
 
             self.print_todo_list()
@@ -98,15 +101,14 @@ class DownloadManager:
 
     def print_todo_list(self) -> None:
         """
-        Prints the todo list of the DownloadManager.
+        Prints the todolist of the DownloadManager.
 
         :return: None
         """
-        if DownloadManager.debug_enabled:
-            F.print_und_log("TODO:")
-            F.print_und_log("-" * 50)
-            self.urls_to_download.print_stack()
-            F.print_und_log(("-" * 50) + "\n\n")
+        F.print_und_log("TODO:")
+        F.print_und_log("-" * 50)
+        self.urls_to_download.print_stack()
+        F.print_und_log(("-" * 50) + "\n\n")
 
     def process_urls(self) -> None:
         """
@@ -121,7 +123,7 @@ class DownloadManager:
         while not self.urls_to_download.is_empty() and (self.maximum_downloads < 0 or self.maximum_downloads > 0):
             self.download_url(self.urls_to_download.pop())
             # wait a sec -> do not go to fast with the server of dt-internet
-            if self.maximum_downloads > 0: # is like a small "debug-mode", so print always:
+            if self.maximum_downloads > 0:  # is like a small "debug-mode", so print always:
                 print("Files to download:", self.maximum_downloads, " - files as result:", len(self.files_processed))
             else:
                 status_file -= 1
@@ -129,12 +131,12 @@ class DownloadManager:
                     print("Files downloaded:", len(self.files_processed))
                     status_file = 100
             pause_each_file_num += 1
-            if  pause_each_file_num >= DownloadManager.pause_each_file:
+            if pause_each_file_num >= DownloadManager.pause_each_file:
                 time.sleep(1)
                 pause_each_file_num = 0
             self.maximum_downloads -= 1
 
-    def __get_download_dir_structure_from(self, url:str) -> None:
+    def __get_download_dir_structure_from(self, url: str) -> None:
         """
         Get the download directory structure from a given URL.
 
@@ -156,11 +158,11 @@ class DownloadManager:
         paths = [path for path in parsed_url.path.split('/') if path]
         try:
             dl_file_name = paths[-1].split('#')[0]
-        except IndexError :
+        except IndexError:
             dl_file_name = NO_FILE_NAME + str(random.randint(100000, 1000000))
         return dl_file_name
 
-    def download_url(self, url : str) -> None:
+    def download_url(self, url: str) -> None:
         """
         Download URL and process page data.
 
@@ -175,8 +177,7 @@ class DownloadManager:
             if page_data:
                 self.process_page_data(page_data, url)
             else:
-                F.logError("No page data found in URL:"+ url)
-
+                F.logError("No page data found in URL:" + url)
 
     def process_page_data(self, page_data: Dict[str, Any], url: str) -> None:
         """
@@ -195,11 +196,11 @@ class DownloadManager:
             os.makedirs(full_download_path, exist_ok=True)
 
         file_path_page = os.path.join(full_download_path, url.split('/')[-1])
-        #file_path_pickle = os.path.join(full_download_path, url.split('/')[-1] + ".pkl")
+        # file_path_pickle = os.path.join(full_download_path, url.split('/')[-1] + ".pkl")
 
         if DownloadManager.debug_enabled:
             F.print_und_log("\n\nNew File:", file_path_page)
-            #F.print_und_log("Pickle File:", file_path_pickle)
+            # F.print_und_log("Pickle File:", file_path_pickle)
             F.print_und_log("Directory:", relativ_download_directory)
             F.print_und_log("file_name:", file_name)
             F.print_und_log("content-type:", page_data["content-type"])
@@ -208,14 +209,14 @@ class DownloadManager:
             F.print_und_log("page_title:", page_data["page_title"])
             F.print_und_log("-" * 50, "\n\n")
             F.print_und_log("Bilder:")
-            for i, img in enumerate( page_data["images"], start=1):
-                F.print_und_log(f"{i}.",img)
+            for i, img in enumerate(page_data["images"], start=1):
+                F.print_und_log(f"{i}.", img)
             F.print_und_log("os.path.basename(file_path_page)", os.path.basename(file_path_page))
             F.print_und_log("-" * 50, "\n\n")
 
-        if len(page_data["images"])>0:
+        if len(page_data["images"]) > 0:
             self.urls_to_download.push_all(page_data["images"], self.config["page_base"])
-            F.print_und_log("Bilder in Todo-Liste eingefügt - TODOs: "+ str(self.urls_to_download.count()))
+            F.print_und_log("Bilder in Todo-Liste eingefügt - TODOs: " + str(self.urls_to_download.count()))
             self.print_todo_list()
 
         if "text/html" in page_data["content-type"]:
@@ -227,11 +228,11 @@ class DownloadManager:
                                   "url": page_data["url"],
                                   "headers": page_data["headers"],
                                   "image_list": page_data["images"]
-                                 }
+                                  }
                 self.files_processed.append(html_file_data)
 
         elif IGNORE_DOWNLOAD in page_data["content-type"]:
-            pass # happens if the picture is embedded in an iframe or a popup
+            pass  # happens if the picture is embedded in an iframe or a popup
 
         else:
             if not DownloadManager.debug_enabled:
@@ -240,7 +241,7 @@ class DownloadManager:
                 image_file_data = {"filename": file_path_page,
                                    "url": page_data["url"],
                                    "headers": page_data["headers"]
-                            }
+                                   }
                 self.files_processed.append(image_file_data)
 
     def get_absolute_url(self, base_url: str, relative_url: str) -> str:
@@ -269,12 +270,12 @@ class DownloadManager:
                     elif not link['href'].startswith(('http://', 'https://')):  # relative url
                         valid_urls.append(self.get_absolute_url(self.config["page_base"], link['href']).split('#')[0])
                 else:
-                    F.print_und_log("Link in Excluded_paths! Link:"+link["href"])
+                    F.print_und_log("Link in Excluded_paths! Link:" + link["href"])
 
         self.urls_to_download.push_all(valid_urls, self.config["page_base"])
 
         if len(valid_urls) > 0:
-            print("Number of links: "+ str(self.urls_to_download.count()))
+            print("Number of links: " + str(self.urls_to_download.count()))
 
         if DownloadManager.debug_enabled:
             self.print_todo_list()
@@ -297,7 +298,7 @@ class DownloadManager:
         try:
             response = requests.get(url)
             if response.status_code == 404:
-                F.logError('Page Not Found:'+url)
+                F.logError('Page Not Found:' + url)
                 F.logError('Ignoring this download')
                 page_data_content_type = IGNORE_DOWNLOAD
                 if self.maximum_downloads > 0:
@@ -307,7 +308,7 @@ class DownloadManager:
                 page_data_content_type = response.headers['content-type']
 
             if "text/html" in page_data_content_type:
-                #F.print_und_log("A html/text to download ->",page_data_content_type)
+                # F.print_und_log("A html/text to download ->",page_data_content_type)
 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 page_title = soup.title.string
@@ -316,7 +317,7 @@ class DownloadManager:
                 col3_content = soup.find('div', id='col3_content')
 
                 if not col3_content:
-                    F.logError("Kein konkreten Inhalt gefunden:"+url)
+                    F.logError("Kein konkreten Inhalt gefunden:" + url)
                     # search for another a-tags:
                     html = soup.find("html")
                     self.extract_new_download_links_from_html_content(html)
@@ -336,23 +337,23 @@ class DownloadManager:
                             image_url = match.group(1)
                             images.append(image_url)
 
-                    #if get_content_as_html:
+                    # if get_content_as_html:
                     content = str(col3_content)
                     # maybe helpfull later
-                    #elif get_content_as_markdown:
+                    # elif get_content_as_markdown:
                     #    markdown_converter = html2text.HTML2Text()
                     #    markdown_converter.ignore_links = False
                     #    content = markdown_converter.handle(str(col3_content))
-                    #else:
+                    # else:
                     #    content = col3_content.get_text()
             else:
-                #F.print_und_log("A Picture or binary to download ->",page_data_content_type)
+                # F.print_und_log("A Picture or binary to download ->",page_data_content_type)
                 page_title = 'FileDownload'
                 content = response.content
                 images = []
 
             return {"url": url,
-                    "encoding":response.encoding,
+                    "encoding": response.encoding,
                     "content-type": page_data_content_type,
                     "headers": response.headers,
                     "page_title": page_title,
@@ -370,10 +371,10 @@ class DownloadManager:
         :param url: The URL to validate.
         :return: True if the URL is valid, False otherwise.
         """
-        file_path = self.__get_download_dir_structure_from(url)+"/"+self.__get_file_name_from(url)
-        if ":" in file_path\
-                or file_path.startswith("/"+NO_FILE_NAME):
-            F.logError("URL is not valid: "+ url)
+        file_path = self.__get_download_dir_structure_from(url) + "/" + self.__get_file_name_from(url)
+        if ":" in file_path \
+                or file_path.startswith("/" + NO_FILE_NAME):
+            F.logError("URL is not valid: " + url)
             return False
         return True
 
@@ -412,3 +413,7 @@ class DownloadManager:
         :rtype: bool
         """
         return len(self.files_processed) > 0
+
+    @classmethod
+    def downloaded_pickle_suffix(cls):
+        return '_files_after_download.pkl'

@@ -109,11 +109,12 @@ class PreparationManager:
                 print(num, filename, "-> ", orig_date_string, " => created_datetime=", created_datetime)
             page["created_datetime"] = created_datetime
 
+
     def prepare_the_files(self, pages):
         self.page_number = 1
         for page in pages:
             page_data = load_the_page(page["filename"])
-            page_data_prepared_filename = page["filename"] + "_prepared.txt"
+            page_data_prepared_filename = page["filename"] + "_prepared.html"
             page["filename_prepared"] = page_data_prepared_filename
             page_data_prepared_data = self.extract_text_and_main_tags(page_data)
             page_data_prepared_data = self.repair_encoding_and_use_html_special_chars(page_data_prepared_data)
@@ -123,50 +124,52 @@ class PreparationManager:
             self.page_number += 1
 
     def extract_text_and_main_tags(self, page_data):
-        if self.page_number == 1:
-            print("Original extract_text_and_main_tags:")
-            print(page_data)
-            print("-"*50)
-            # command: delete all unnecessary div-tags in the html-text in page_data
-            soup = BeautifulSoup(page_data, "html.parser")
+        # command: delete all unnecessary div-tags in the html-text in page_data
+        soup = BeautifulSoup(page_data, "html.parser")
 
-            # Get rid of HTML-Comments
-            for element in soup(text=lambda text: isinstance(text, Comment)):
-                element.extract()
+        # Get rid of HTML-Comments
+        for element in soup(text=lambda text: isinstance(text, Comment)):
+            element.extract()
 
-            # Get rid of div tags but keep their content
-            for div_tag in soup.find_all("div"):
-                div_tag.replace_with(*div_tag.contents)
+        # Get rid of div tags but keep their content
+        for div_tag in soup.find_all("div"):
+            div_tag.replace_with(*div_tag.contents)
 
-            page_data = soup.prettify()
-        if self.page_number == 1:
-            print("Cleaned html:")
-            print(page_data)
-            print("-"*50)
+        page_data = soup.prettify()
+
         return page_data
 
     def repair_encoding_and_use_html_special_chars(self, page_data_prepared_data):
-        #if self.page_number == 1:
-        #    print("Original:")
-        #    print(page_data_prepared_data)
-        #    print("-" * 50)
+
+        # if self.page_number == 1:
+        #     print("\n\nOriginal page_data_prepared_data:")
+        #     print(page_data_prepared_data)
+        #     print("-"*50)
 
         # Dictionary of German umlauts and special character to replace
+        german_chars_final = {
+            '___auml;': '&auml;',
+            '___ouml;': '&ouml;',
+            '___uuml;': '&uuml;',
+            '___szlig;': '&szlig;',
+            '___Auml;': '&Auml;',
+            '___Ouml;': '&Ouml;',
+            '___Uuml;': '&Uuml;',
+            '___laquo;': '&laquo;'
+        }
         german_chars = {
-            'ä': '&auml;',
-            'ö': '&ouml;',
-            'ü': '&uuml;',
-            'ß': '&szlig;',
-            'Ä': '&Auml;',
-            'Ö': '&Ouml;',
-            'Ü': '&Uuml;',
-            '«': '&laquo;'
+            'ä': '___auml;',
+            'ö': '___ouml;',
+            'ü': '___uuml;',
+            'ß': '___szlig;',
+            'Ä': '___Auml;',
+            'Ö': '___Ouml;',
+            'Ü': '___Uuml;',
+            '«': '___laquo;'
         }
 
-        # beautiful soup parse html
         soup = BeautifulSoup(page_data_prepared_data, "html.parser")
 
-        # Recursive function to replace umlauts in text nodes
         def replace_in_text_nodes(node):
             if node.string:
                 for char, replacement in german_chars.items():
@@ -180,9 +183,20 @@ class PreparationManager:
         replace_in_text_nodes(soup)
         page_data_prepared_data = soup.prettify()
 
-        #if self.page_number == 1:
-        #    print(":")
-        #    print(page_data_prepared_data)
-        #    print("-" * 50)
+        for char, replacement in german_chars_final.items():
+            page_data_prepared_data = page_data_prepared_data.replace(char, replacement)
+
+        # if self.page_number == 1:
+        #     print("\n\nhtml with special chars:")
+        #     print(page_data_prepared_data)
+        #     print("-"*50)
 
         return page_data_prepared_data
+
+    def save_filelist_to_pickle(self, pickle_filename):
+        with open(pickle_filename, 'wb') as f_output:
+            pickle.dump(self.files_processed, f_output)
+
+    @classmethod
+    def prepared_pickle_suffix(cls):
+        return '_files_after_preparation.pkl'

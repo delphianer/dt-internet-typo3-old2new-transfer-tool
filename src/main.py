@@ -15,15 +15,17 @@ def get_and_prepare_config():
         # todo: Typo3-Version für die Config festsetzen => neue Version braucht ggf. Anpassung
         cfg['download_dir_prefix'] = "ovetze.drkcms.de-"
         cfg['page_base'] = "http://ovetze.drkcms.de/"
-        cfg['page_sitemap'] = "sonderseiten/sitemap.html"
+        cfg['page_sitemap'] = "http://ovetze.drkcms.de/nc/angebote/gesundheitsprogramme/test123.html"#"sonderseiten/sitemap.html"
         cfg['get_text'] = True
         cfg['get_pictures'] = True
         cfg['sleep_between_pages'] = 1
         cfg['excluded_paths'] = ["javascript:", "suche.html", "sonderseiten/drkde.html"] # "termine", "news", "aktuelles", -> auch News sind Seiten...
-        cfg['extra_paths'] = ["sonderseiten/impressum.html",
-                              "sonderseiten/datenschutz.html",
-                              "aktuelles/news.html"]
-        cfg['target_page'] = ["https://drk-spielberg.de/"] # for test only!
+        cfg['extra_paths'] = ["http://ovetze.drkcms.de/nc/angebote/gesundheitsprogramme/test123.html#c9920"
+                              #,"sonderseiten/impressum.html"
+                              #,"sonderseiten/datenschutz.html"
+                              #,"aktuelles/news.html"
+                              ]
+        cfg['target_page'] = ["https://drk-etzenrot.de/"] # for test only!
         cfg['target_page_test_only'] = True
         F.save_a_config(cfg)
         print(f"New config saved to {F.get_config_file_name()}")
@@ -38,8 +40,9 @@ def get_and_prepare_config():
     return cfg, dl_folder_name
 
 
-def ask_for_pickle_filename():
-    path = os.path.join(os.path.dirname(download_folder_name), filter_files)
+def ask_for_pickle_filename(files_filter):
+    path = os.path.join(os.path.dirname(download_folder_name), files_filter)
+    print(path)
     pkl_files = glob.glob(path)
     if len(pkl_files) > 0:
         for i, file in enumerate(pkl_files):
@@ -65,7 +68,7 @@ if __name__ == "__main__":
     config, download_folder_name = get_and_prepare_config()
 
     # todo: change if other imports
-    default_load = True
+    default_load = False #True
     default_load_number = 4
 
     files_processed = []
@@ -73,7 +76,9 @@ if __name__ == "__main__":
     if default_load:
         download_or_load = "l"
     else:
-        download_or_load = input("Enter 'L' for load old case or leave blank for download: ")
+        download_or_load = input("Enter 'L' for load one of last downloaded cases or\n"+
+                                 "'U' for load one of last prepared cases or\n"+
+                                 "leave blank for download: ")
     pickle_file_to_load = ""
     dlMan = DownloadManager(config, download_folder_name)
 
@@ -84,15 +89,16 @@ if __name__ == "__main__":
         if len(num_downloads) > 0:
             DownloadManager.maximum_downloads = int(num_downloads)
         dlMan.download_files()
-        dlMan.save_filelist_to_pickle(download_folder_name+'_files_after_download.pkl')
+        dlMan.save_filelist_to_pickle(download_folder_name+DownloadManager.downloaded_pickle_suffix())
     else:
-        filter_files = '*downloaded.pkl'
-        pickle_file_to_load = ask_for_pickle_filename()
+        file_filter = '*'+DownloadManager.downloaded_pickle_suffix()
+        pickle_file_to_load = ask_for_pickle_filename(file_filter)
 
     # 2. Step: Prepare Data to Upload
     # if pickle to load - print the stats first
-    if len(pickle_file_to_load) > 0:
+    if download_or_load.lower() == 'l' and len(pickle_file_to_load) > 0:
         dlMan.load_filelist_from(pickle_file_to_load)
+        pickle_file_to_load = ""
 
     pagePrepMan = PreparationManager()
     pagePrepMan.debug_enabled = DownloadManager.debug_enabled
@@ -101,10 +107,16 @@ if __name__ == "__main__":
         pagePrepMan.set_files_processed(dlMan.get_files_to_prepare_for_upload())
         pagePrepMan.print_download_stats()
         pagePrepMan.prepare_pages()
-        # todo: pagePrepMan.save_filelist_to_pickle()
+        pagePrepMan.save_filelist_to_pickle(download_folder_name + PreparationManager.prepared_pickle_suffix())
 
     # 3. Step: Use Typo3-API https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/Introduction/Index.html
     # TODO: read and use documentation
     # todo: ask_for_pickle_filename and ask if only upload processed
+    if download_or_load.lower() == 'u':
+        file_filter = "*"+PreparationManager.prepared_pickle_suffix()
+        pickle_file_to_load = ask_for_pickle_filename(file_filter)
+        if len(pickle_file_to_load) > 0:
+            pass
+
     # cfg['target_page'] => where to upload all the data
     # cfg['target_page_test_only'] => will add the first page or image and delete it directly after
